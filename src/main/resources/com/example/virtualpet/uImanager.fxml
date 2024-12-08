@@ -1,0 +1,87 @@
+import javafx.scene.Scene;
+        import javafx.scene.control.Button;
+        import javafx.scene.control.Label;
+        import javafx.scene.control.ProgressBar;
+        import javafx.scene.layout.VBox;
+        import javafx.stage.Stage;
+
+        public class UIManager {
+        private Stage stage;
+        private Scene mainMenuScene;
+        private Scene gameScene;
+        private Pet pet;
+        private GameLogic gameLogic;
+
+        public UIManager(Stage stage) {
+        this.stage = stage;
+        this.pet = new Pet();
+        this.gameLogic = new GameLogic(pet, this);
+        setupScenes();
+        }
+
+        private void setupScenes() {
+        mainMenuScene = createMainMenuScene();
+        gameScene = createGameScene();
+        }
+
+        public Scene getMainMenuScene() {
+        return mainMenuScene;
+        }
+
+        private Scene createMainMenuScene() {
+        VBox layout = new VBox(10);
+        Label title = new Label("Welcome to Virtual Pet!");
+        Button startButton = new Button("Start Game");
+        startButton.setOnAction(e -> stage.setScene(gameScene));
+
+        layout.getChildren().addAll(title, startButton);
+        return new Scene(layout, 400, 300);
+        }
+
+        private Scene createGameScene() {
+        VBox layout = new VBox(10);
+
+        // Pet stats
+        ProgressBar hungerBar = new ProgressBar(pet.getHunger() / 100.0);
+        ProgressBar energyBar = new ProgressBar(pet.getEnergy() / 100.0);
+        ProgressBar happinessBar = new ProgressBar(pet.getHappiness() / 100.0);
+
+        Label hungerLabel = new Label("Hunger");
+        Label energyLabel = new Label("Energy");
+        Label happinessLabel = new Label("Happiness");
+
+        // Actions
+        Button feedButton = new Button("Feed");
+        feedButton.setOnAction(e -> {
+        pet.feed();
+        updateBars(hungerBar, energyBar, happinessBar);
+        });
+
+        Button playButton = new Button("Play");
+        playButton.setOnAction(e -> {
+        pet.play();
+        updateBars(hungerBar, energyBar, happinessBar);
+        });
+
+        Button restButton = new Button("Rest");
+        restButton.setOnAction(e -> {
+        pet.rest();
+        updateBars(hungerBar, energyBar, happinessBar);
+        });
+
+        layout.getChildren().addAll(
+        hungerLabel, hungerBar,
+        energyLabel, energyBar,
+        happinessLabel, happinessBar,
+        feedButton, playButton, restButton
+        );
+
+        return new Scene(layout, 400, 300);
+        }
+
+        public void updateBars(ProgressBar hungerBar, ProgressBar energyBar, ProgressBar happinessBar) {
+        hungerBar.setProgress(pet.getHunger() / 100.0);
+        energyBar.setProgress(pet.getEnergy() / 100.0);
+        happinessBar.setProgress(pet.getHappiness() / 100.0);
+        }
+        }
