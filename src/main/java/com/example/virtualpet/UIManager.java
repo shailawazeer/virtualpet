@@ -17,16 +17,13 @@ import java.util.Random;
 public class UIManager {
     private Pet pet;
     private PetActionsManager actionsManager;
-    private StackPane roomLayout;
     private ProgressBar energyBar, hungerBar, happinessBar;
     private Label statusLabel;
     private Stage primaryStage;
-    private String currentQuestion;
-    private String correctAnswer;
 
-    public UIManager(Stage primaryStage) {
+    public UIManager(Stage primaryStage, Pet pet) {
         this.primaryStage = primaryStage;
-        this.pet = pet; // Use the pet instance passed in constructor
+        this.pet = pet; // Pet instance passed from the main class
         this.actionsManager = new PetActionsManager(this.pet);
     }
 
@@ -39,7 +36,7 @@ public class UIManager {
         title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
         Button startGameButton = new Button("Start Game");
-        startGameButton.setOnAction(e -> primaryStage.setScene(getGameScene()));  // Change scene to the game scene
+        startGameButton.setOnAction(e -> primaryStage.setScene(getGameScene()));
 
         Button instructionsButton = new Button("Instructions");
         instructionsButton.setOnAction(e -> showInstructions());
@@ -52,206 +49,178 @@ public class UIManager {
     }
 
     private void showInstructions() {
-        // Implement instructions if needed
+        Stage instructionsStage = new Stage();
+        VBox instructionsLayout = new VBox(15);
+        instructionsLayout.setStyle("-fx-padding: 20; -fx-background-color: lightyellow; -fx-alignment: center;");
+
+        Label title = new Label("How to Play Virtual Pet Game");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+
+        Label instruction1 = new Label("1. Feed, play, and make your pet sleep to maintain stats.");
+        Label instruction2 = new Label("2. Monitor Energy, Hunger, and Happiness levels.");
+        Label instruction3 = new Label("3. Play quizzes to boost energy and happiness.");
+
+        Button closeButton = new Button("Close");
+        closeButton.setOnAction(e -> instructionsStage.close());
+
+        instructionsLayout.getChildren().addAll(title, instruction1, instruction2, instruction3, closeButton);
+        instructionsStage.setScene(new Scene(instructionsLayout, 400, 300));
+        instructionsStage.show();
     }
 
     // Game Scene
     public Scene getGameScene() {
-        // Create the main layout for the game
         StackPane gameLayout = new StackPane();
 
-        // Set the room background image
+        // Room Background
         Image roomImage = new Image(getClass().getResourceAsStream("/room.jpeg"));
         ImageView roomBackground = new ImageView(roomImage);
         roomBackground.setFitWidth(800);
         roomBackground.setFitHeight(600);
 
-        // Add the pet image
-        Image petImage = new Image(getClass().getResourceAsStream("/pet.png"));
-        ImageView petView = new ImageView(petImage);
+        // Pet Image
+        ImageView petView = new ImageView(new Image(getClass().getResourceAsStream("/pet.png")));
         petView.setFitWidth(150);
         petView.setFitHeight(150);
-        petView.setTranslateX(50);
         petView.setTranslateY(150);
 
-        // Add animation for the pet to move back and forth
+        // Pet Animation
         TranslateTransition petAnimation = new TranslateTransition(Duration.seconds(3), petView);
         petAnimation.setByX(100);
         petAnimation.setCycleCount(TranslateTransition.INDEFINITE);
         petAnimation.setAutoReverse(true);
         petAnimation.play();
 
-        // Create an instance of PetFood
-        PetFood petFood = new PetFood(gameLayout);
+        // Left Panel for Stats and Buttons
+        VBox leftPanel = new VBox(15);
+        leftPanel.setStyle("-fx-padding: 20; -fx-alignment: top-left;");
 
-        // Left panel for stats and actions
-        VBox leftPanel = new VBox(15); // Vertical layout with spacing
-        leftPanel.setStyle("-fx-padding: 20; -fx-alignment: top-left;"); // Align panel contents to the left
+        energyBar = new ProgressBar(pet.getEnergy() / 100.0);
+        hungerBar = new ProgressBar(pet.getHunger() / 100.0);
+        happinessBar = new ProgressBar(pet.getHappiness() / 100.0);
 
-        // Create labels and progress bars for pet stats
-        VBox energyBox = createProgressBarWithLabel("Energy Level", pet.getEnergy());
-        Button energyLevelButton = new Button("Check Energy");
-        energyLevelButton.setOnAction(e -> statusLabel.setText("Current Energy: " + pet.getEnergy() + "%"));
-
-        VBox hungerBox = createProgressBarWithLabel("Hunger Level", pet.getHunger());
-        Button hungerLevelButton = new Button("Check Hunger");
-        hungerLevelButton.setOnAction(e -> statusLabel.setText("Current Hunger: " + pet.getHunger() + "%"));
-
-        VBox happinessBox = createProgressBarWithLabel("Happiness Level", pet.getHappiness());
-        Button happinessLevelButton = new Button("Check Happiness");
-        happinessLevelButton.setOnAction(e -> statusLabel.setText("Current Happiness: " + pet.getHappiness() + "%"));
-
-        // Feed button - Add the energy and happiness updates here
         Button feedButton = new Button("Feed");
         feedButton.setOnAction(e -> {
-            // Pause the pet's animation (stop it from moving while eating)
-            petAnimation.pause();
-
-            petFood.showFood(); // Show the food in front of the pet
-            actionsManager.eatFood(statusLabel, hungerBar, happinessBar, gameLayout);
-
-            // Increase the energy and happiness levels when the pet is fed
-            pet.setEnergy(Math.min(pet.getEnergy() + 10, 100));  // Increase energy (max 100)
-            pet.setHappiness(Math.min(pet.getHappiness() + 10, 100));  // Increase happiness (max 100)
-
-            // Update progress bars after feeding the pet
-            energyBar.setProgress(pet.getEnergy() / 100.0);  // Update energy progress bar
-            happinessBar.setProgress(pet.getHappiness() / 100.0);  // Update happiness progress bar
-
-            // Optional: Hide food after a delay (e.g., 3 seconds)
-            new Thread(() -> {
-                try {
-                    Thread.sleep(3000); // 3 seconds for the pet to "eat"
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-                Platform.runLater(() -> {
-                    petFood.hideFood();  // Hide food after eating
-                    petAnimation.play(); // Resume the pet's movement after feeding
-                });
-            }).start();
+            changePetImageTemporarily(petView, "/pet_eating.png", 3000);
+            pet.setHunger(Math.max(pet.getHunger() - 20, 0));
+            pet.setHappiness(Math.min(pet.getHappiness() + 10, 100));
+            statusLabel.setText("Your pet is eating happily!");
+            statusLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+            updateStats();
         });
 
-        // **Sleep button - Pauses the pet and increases its energy**
         Button sleepButton = new Button("Sleep");
         sleepButton.setOnAction(e -> {
-            // Pause the pet's animation (stop it from moving while sleeping)
+            changePetImageTemporarily(petView, "/pet_sleep.png", 3000);
+            pet.setEnergy(Math.min(pet.getEnergy() + 20, 100));
+            updateStats();
+            statusLabel.setText("Your pet is sleeping peacefully.");
+            statusLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+
+        });
+
+        // Happy Button
+        Button smileButton = new Button("Smile");
+        smileButton.setOnAction(e -> {
+            // Pause the pet's animation
             petAnimation.pause();
 
-            // Increase energy and update progress bar
-            pet.setEnergy(Math.min(pet.getEnergy() + 20, 100));  // Increase energy by 20 (max 100)
-            energyBar.setProgress(pet.getEnergy() / 100.0);  // Update energy progress bar
-            statusLabel.setText("Pet is sleeping... Energy increased!");
+            // Change the pet's image to happy
+            changePetImageTemporarily(petView, "/Happy.png", 3000);
 
-            // Simulate the sleep duration (e.g., 3 seconds)
+            // Update the happiness stat
+            pet.setHappiness(Math.min(pet.getHappiness() + 30, 100));
+            updateStats();
+
+            // Update the status label
+            statusLabel.setText("Your pet is feeling super happy!");
+            statusLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+
+            // Resume the animation after the image changes back
             new Thread(() -> {
                 try {
-                    Thread.sleep(3000); // 3 seconds for the pet to "sleep"
+                    Thread.sleep(3000);
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
                 }
-                Platform.runLater(() -> {
-                    petAnimation.play(); // Resume the pet's movement after sleep
-                    statusLabel.setText("Pet is awake and moving!");
-                });
+                Platform.runLater(petAnimation::play);
             }).start();
         });
 
-        // Inside getGameScene(), add the Play Quiz button:
-        Button playQuizButton = new Button("Play Quiz");
-        playQuizButton.setOnAction(e -> showQuiz()); // This triggers the quiz
-        leftPanel.getChildren().add(playQuizButton); // Add to the layout
-
-        // Add the feed button, sleep button, and others to the left panel
         leftPanel.getChildren().addAll(
-                energyBox, energyLevelButton,
-                hungerBox, hungerLevelButton,
-                happinessBox, happinessLevelButton,
-                feedButton, sleepButton // Add sleep button here
+                createLabeledBar("Energy", energyBar),
+                createLabeledBar("Hunger", hungerBar),
+                createLabeledBar("Happiness", happinessBar),
+                feedButton, sleepButton, smileButton
         );
 
-        // Status Label at the bottom
-        statusLabel = new Label("Welcome to the Virtual Pet Game!");
-        statusLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10;");
+        // Status Label
+        statusLabel = new Label("Take care of your pet!");
+        statusLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
         StackPane.setAlignment(statusLabel, javafx.geometry.Pos.BOTTOM_CENTER);
 
-        // Add all elements to the game layout
         gameLayout.getChildren().addAll(roomBackground, petView, leftPanel, statusLabel);
-
-        // Return the game scene
         return new Scene(gameLayout, 800, 600);
     }
 
-    private VBox createProgressBarWithLabel(String labelName, double value) {
-        ProgressBar progressBar = new ProgressBar(value / 100.0);
-        progressBar.setPrefWidth(150);
-        progressBar.setStyle("-fx-accent: green;");
+    // Utility: Change Pet Image Temporarily
+    private void changePetImageTemporarily(ImageView petView, String imagePath, int durationMillis) {
+        Image tempImage = new Image(getClass().getResourceAsStream(imagePath));
+        petView.setImage(tempImage);
 
-        Label label = new Label(labelName);
-        label.setStyle("-fx-font-size: 14px;");
-
-        VBox container = new VBox(5);
-        container.getChildren().addAll(label, progressBar);
-        container.setStyle("-fx-alignment: center-left;");
-        return container;
+        new Thread(() -> {
+            try {
+                Thread.sleep(durationMillis);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            Platform.runLater(() -> petView.setImage(new Image(getClass().getResourceAsStream("/pet.png"))));
+        }).start();
     }
+    private void updateStats() {
+        // Update Progress Bars
+        energyBar.setProgress(pet.getEnergy() / 100.0);
+        hungerBar.setProgress(pet.getHunger() / 100.0);
+        happinessBar.setProgress(pet.getHappiness() / 100.0);
 
-    private void showQuiz() {
-        // Create a new stage for the quiz
-        StackPane quizLayout = new StackPane();
-        Random rand = new Random();
-
-        // Generate a random question and answers
-        int num1 = rand.nextInt(10) + 1;
-        int num2 = rand.nextInt(10) + 1;
-        currentQuestion = "What is " + num1 + " + " + num2 + "?";
-        correctAnswer = String.valueOf(num1 + num2);
-
-        Label questionLabel = new Label(currentQuestion);
-        questionLabel.setStyle("-fx-font-size: 20px;");
-
-        Button correctAnswerButton = new Button(correctAnswer);
-        correctAnswerButton.setOnAction(e -> {
-            pet.setEnergy(80);  // Set energy to 80
-            pet.setHappiness(50);  // Set happiness to 50
-            statusLabel.setText("Correct! Energy increased.");
-            closeQuiz(); // Close the quiz after answering correctly
-        });
-
-        // Generate a wrong answer button randomly
-        int wrongAnswer = Integer.parseInt(correctAnswer) + rand.nextInt(5) + 1; // Ensure it's not the correct answer
-        Button wrongAnswerButton = new Button(String.valueOf(wrongAnswer));
-        wrongAnswerButton.setOnAction(e -> {
-            statusLabel.setText("Incorrect. Try again.");
-            closeQuiz(); // Close the quiz after answering incorrectly
-        });
-
-        VBox quizBox = new VBox(20);
-        quizBox.getChildren().addAll(questionLabel, correctAnswerButton, wrongAnswerButton);
-        quizLayout.getChildren().add(quizBox);
-
-        Scene quizScene = new Scene(quizLayout, 400, 300);
-        Stage quizStage = new Stage();
-        quizStage.setTitle("Quiz Challenge");
-        quizStage.setScene(quizScene);
-        quizStage.show();
+        // Update Label Colors
+        updateLabelColor(energyBar, pet.getEnergy());
+        updateLabelColor(hungerBar, pet.getHunger());
+        updateLabelColor(happinessBar, pet.getHappiness());
     }
+    private void updateLabelColor(ProgressBar bar, double value) {
+        String color;
 
-    // Method to close the quiz and return to the main game screen
-    private void closeQuiz() {
-        Stage stage = (Stage) primaryStage.getOwner();  // Get the quiz stage
-        stage.close(); // Close the quiz window
+        if (value < 30) {
+            color = "red"; // Low level
+        } else if (value >= 30 && value < 70) {
+            color = "yellow"; // Medium level
+        } else {
+            color = "white"; // High level
+        }
+
+        // Set the label color (assumes the label is a sibling of the bar)
+        bar.getParent().getChildrenUnmodifiable()
+                .filtered(node -> node instanceof Label)
+                .forEach(label -> ((Label) label).setStyle("-fx-text-fill: " + color + ";"));
     }
+    private HBox createLabeledBar(String name, ProgressBar bar) {
+        Label label = new Label(name);
+        label.setStyle("-fx-font-size: 14px; -fx-text-fill: white;"); // Default color
 
+        HBox hBox = new HBox(10, label, bar);
+        hBox.setStyle("-fx-alignment: center-left;");
+        return hBox;
+    }
     public void updateEnergyBar(double energy) {
-        energyBar.setProgress(energy / 100.0);
-    }
-
-    public void updateHungerBar(double hunger) {
-        hungerBar.setProgress(hunger / 100.0);
+        energyBar.setProgress(energy / 100.0); // Update the energy progress bar
     }
 
     public void updateHappinessBar(double happiness) {
-        happinessBar.setProgress(happiness / 100.0);
+        happinessBar.setProgress(happiness / 100.0); // Update the happiness progress bar
+    }
+
+    public void updateHungerBar(double hunger) {
+        hungerBar.setProgress(hunger / 100.0); // Update the hunger progress bar
     }
 }
