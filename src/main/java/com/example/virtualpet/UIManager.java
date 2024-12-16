@@ -8,11 +8,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UIManager {
     private Pet pet;
@@ -21,10 +24,16 @@ public class UIManager {
     private Label statusLabel;
     private Stage primaryStage;
 
+    // For Riddles Quiz
+    private List<Riddle> riddles;
+    private int currentRiddleIndex = 0;
+    private int score = 0;
+
     public UIManager(Stage primaryStage, Pet pet) {
         this.primaryStage = primaryStage;
-        this.pet = pet; // Pet instance passed from the main class
+        this.pet = pet;
         this.actionsManager = new PetActionsManager(this.pet);
+        initializeRiddles(); // Initialize riddles for the quiz
     }
 
     // Main Menu Scene
@@ -38,13 +47,16 @@ public class UIManager {
         Button startGameButton = new Button("Start Game");
         startGameButton.setOnAction(e -> primaryStage.setScene(getGameScene()));
 
+        Button riddlesQuizButton = new Button("Riddles Quiz");
+        riddlesQuizButton.setOnAction(e -> startRiddlesQuiz());
+
         Button instructionsButton = new Button("Instructions");
         instructionsButton.setOnAction(e -> showInstructions());
 
         Button exitButton = new Button("Exit Game");
         exitButton.setOnAction(e -> Platform.exit());
 
-        menuLayout.getChildren().addAll(title, startGameButton, instructionsButton, exitButton);
+        menuLayout.getChildren().addAll(title, startGameButton, riddlesQuizButton, instructionsButton, exitButton);
         return new Scene(menuLayout, 800, 600);
     }
 
@@ -116,7 +128,6 @@ public class UIManager {
             updateStats();
             statusLabel.setText("Your pet is sleeping peacefully.");
             statusLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
-
         });
 
         // Happy Button
@@ -163,64 +174,111 @@ public class UIManager {
         return new Scene(gameLayout, 800, 600);
     }
 
-    // Utility: Change Pet Image Temporarily
-    private void changePetImageTemporarily(ImageView petView, String imagePath, int durationMillis) {
-        Image tempImage = new Image(getClass().getResourceAsStream(imagePath));
-        petView.setImage(tempImage);
+    // Riddles Quiz
+    private void initializeRiddles() {
+        riddles = new ArrayList<>();
+        riddles.add(new Riddle("What has keys but can’t open locks?", "A piano"));
+        riddles.add(new Riddle("What has to be broken before you can use it?", "An egg"));
+        riddles.add(new Riddle("I’m tall when I’m young, and I’m short when I’m old. What am I?", "A candle"));
+        riddles.add(new Riddle("What begins with T, ends with T, and has T in it?", "A teapot"));
+        riddles.add(new Riddle("What has hands but can’t clap?", "A clock"));
+        riddles.add(new Riddle("I have branches, but no fruit, trunk, or leaves. What am I?", "A bank"));
+        riddles.add(new Riddle("What has a face and two hands but no arms or legs?", "A clock"));
+        riddles.add(new Riddle("What is full of holes but still holds water?", "A sponge"));
+    }
 
+    private void startRiddlesQuiz() {
+        currentRiddleIndex = 0; // Reset the quiz index
+        score = 0; // Reset the score
+        showRiddle();
+    }
+
+    private void showRiddle() {
+        if (currentRiddleIndex < riddles.size()) {
+            Riddle riddle = riddles.get(currentRiddleIndex);
+            VBox riddleLayout = new VBox(20);
+            riddleLayout.setStyle("-fx-padding: 50; -fx-alignment: center; -fx-background-color: lightgreen;");
+
+            Label riddleLabel = new Label(riddle.getQuestion());
+            Button answerButton = new Button("Show Answer");
+            answerButton.setOnAction(e -> showAnswer(riddle.getAnswer()));
+
+            riddleLayout.getChildren().addAll(riddleLabel, answerButton);
+            primaryStage.setScene(new Scene(riddleLayout, 400, 300));
+        } else {
+            showResult();
+        }
+    }
+
+    private void showAnswer(String answer) {
+        VBox answerLayout = new VBox(20);
+        answerLayout.setStyle("-fx-padding: 50; -fx-alignment: center; -fx-background-color: lightyellow;");
+
+        Label answerLabel = new Label("The answer is: " + answer);
+        Button nextButton = new Button("Next Riddle");
+        nextButton.setOnAction(e -> {
+            currentRiddleIndex++;
+            showRiddle();
+        });
+
+        answerLayout.getChildren().addAll(answerLabel, nextButton);
+        primaryStage.setScene(new Scene(answerLayout, 400, 300));
+    }
+
+    private void showResult() {
+        VBox resultLayout = new VBox(20);
+        resultLayout.setStyle("-fx-padding: 50; -fx-alignment: center; -fx-background-color: lightblue;");
+
+        Label resultLabel = new Label("Quiz Complete! Your score: " + score + "/" + riddles.size());
+        Button restartButton = new Button("Restart Quiz");
+        restartButton.setOnAction(e -> startRiddlesQuiz());
+
+        resultLayout.getChildren().addAll(resultLabel, restartButton);
+        primaryStage.setScene(new Scene(resultLayout, 400, 300));
+    }
+
+    private HBox createLabeledBar(String label, ProgressBar bar) {
+        HBox hbox = new HBox(10);
+        Label barLabel = new Label(label);
+        hbox.getChildren().addAll(barLabel, bar);
+        return hbox;
+    }
+
+    private void changePetImageTemporarily(ImageView petView, String imagePath, int duration) {
+        Image petImage = new Image(getClass().getResourceAsStream(imagePath));
+        petView.setImage(petImage);
         new Thread(() -> {
             try {
-                Thread.sleep(durationMillis);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.sleep(duration);
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
             }
             Platform.runLater(() -> petView.setImage(new Image(getClass().getResourceAsStream("/pet.png"))));
         }).start();
     }
+
     private void updateStats() {
-        // Update Progress Bars
         energyBar.setProgress(pet.getEnergy() / 100.0);
         hungerBar.setProgress(pet.getHunger() / 100.0);
         happinessBar.setProgress(pet.getHappiness() / 100.0);
-
-        // Update Label Colors
-        updateLabelColor(energyBar, pet.getEnergy());
-        updateLabelColor(hungerBar, pet.getHunger());
-        updateLabelColor(happinessBar, pet.getHappiness());
     }
-    private void updateLabelColor(ProgressBar bar, double value) {
-        String color;
 
-        if (value < 30) {
-            color = "red"; // Low level
-        } else if (value >= 30 && value < 70) {
-            color = "yellow"; // Medium level
-        } else {
-            color = "white"; // High level
+    // Inner class for Riddle
+    private static class Riddle {
+        private String question;
+        private String answer;
+
+        public Riddle(String question, String answer) {
+            this.question = question;
+            this.answer = answer;
         }
 
-        // Set the label color (assumes the label is a sibling of the bar)
-        bar.getParent().getChildrenUnmodifiable()
-                .filtered(node -> node instanceof Label)
-                .forEach(label -> ((Label) label).setStyle("-fx-text-fill: " + color + ";"));
-    }
-    private HBox createLabeledBar(String name, ProgressBar bar) {
-        Label label = new Label(name);
-        label.setStyle("-fx-font-size: 14px; -fx-text-fill: white;"); // Default color
+        public String getQuestion() {
+            return question;
+        }
 
-        HBox hBox = new HBox(10, label, bar);
-        hBox.setStyle("-fx-alignment: center-left;");
-        return hBox;
-    }
-    public void updateEnergyBar(double energy) {
-        energyBar.setProgress(energy / 100.0); // Update the energy progress bar
-    }
-
-    public void updateHappinessBar(double happiness) {
-        happinessBar.setProgress(happiness / 100.0); // Update the happiness progress bar
-    }
-
-    public void updateHungerBar(double hunger) {
-        hungerBar.setProgress(hunger / 100.0); // Update the hunger progress bar
+        public String getAnswer() {
+            return answer;
+        }
     }
 }

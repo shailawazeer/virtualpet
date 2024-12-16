@@ -21,7 +21,6 @@ public class Main extends Application {
         primaryStage.setScene(mainMenuScene); // Set the main menu scene
         primaryStage.show();
     }
-
     public static void main(String[] args) {
         launch(args);
     }
