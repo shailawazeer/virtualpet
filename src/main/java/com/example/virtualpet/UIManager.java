@@ -105,7 +105,7 @@ public class UIManager {
 
         // Left Panel for Stats and Buttons
         VBox leftPanel = new VBox(15);
-        leftPanel.setStyle("-fx-padding: 20; -fx-alignment: top-left;");
+        leftPanel.setStyle("-fx-padding: 20;-fx-text-fill: white; -fx-alignment: top-left;");
 
         energyBar = new ProgressBar(pet.getEnergy() / 100.0);
         hungerBar = new ProgressBar(pet.getHunger() / 100.0);
